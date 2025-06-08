@@ -1,19 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import ChatbotIcon from './ChatbotIcon';
 import ChatForm from './ChatForm';
 import ChatMessage from './ChatMessage';
 import { companyInfo } from './companyInfo';
-import './Chatbot.css';
+import '../index.css';
 
-const Chatbot = ({ onClose }) => {
-  const [chatHistory, setChatHistory] = useState([
-    {
-      role: "model",
-      text: companyInfo,
-      hideInChat: true,
-    }
-  ]);
+const Chatbot = ({ onClose, chatHistory, setChatHistory }) => {
   const chatBodyRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -51,11 +44,11 @@ const Chatbot = ({ onClose }) => {
         contents: [
           {
             role: "user",
-            parts: [{ text: `Here is the company information you should use to answer questions: ${companyInfo}` }]
+            parts: [{ text: `Đây là thông tin của công ty mà bạn có thể sử dụng để trả lời câu hỏi: ${companyInfo}` }]
           },
           {
             role: "model",
-            parts: [{ text: "I understand. I will use this company information to answer questions." }]
+            parts: [{ text: "Tôi hiểu. Tôi sẽ sử dụng thông tin công ty này để trả lời câu hỏi." }]
           },
           {
             role: "user",
@@ -81,9 +74,16 @@ const Chatbot = ({ onClose }) => {
       console.log("API Response:", data);
       
       if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        // Clean up the response text by removing markdown formatting
+        const cleanText = data.candidates[0].content.parts[0].text
+          .replace(/\*\*/g, '') // Remove ** marks
+          .replace(/\*/g, '')   // Remove single * marks
+          .replace(/`/g, '')    // Remove backticks
+          .trim();              // Remove extra whitespace
+        
         setChatHistory(prev => [...prev, {
           role: "model",
-          text: data.candidates[0].content.parts[0].text
+          text: cleanText
         }]);
       } else {
         throw new Error("Invalid response format from API");
@@ -119,7 +119,7 @@ const Chatbot = ({ onClose }) => {
           <div className="message bot-message">
             <ChatbotIcon />
             <p className="message-text">
-              Hello! I'm your Q-Rise assistant. How can I help you today?
+              Xin chào! Tôi là Q-Rise assistant. Tôi có thể giúp gì cho bạn hôm nay?
             </p>
           </div>
           {chatHistory.map((chat, index) => (  
