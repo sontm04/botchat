@@ -20,74 +20,31 @@ const Chatbot = ({ onClose, chatHistory, setChatHistory }) => {
   }, [chatHistory]);
 
   const generateBotResponse = async(history) => {
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-    
-    if (!API_KEY) {
-      console.error("API key is missing. Please add VITE_GEMINI_API_KEY to your .env file");
-      setChatHistory(prev => [...prev, {
-        role: "model",
-        text: "Error: API key is missing. Please check your configuration."
-      }]);
-      return;
-    }
-
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
-    
     const lastUserMessage = history[history.length - 1];
     
-    const requestOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: `Đây là thông tin của công ty mà bạn có thể sử dụng để trả lời câu hỏi: ${companyInfo}` }]
-          },
-          {
-            role: "model",
-            parts: [{ text: "Tôi hiểu. Tôi sẽ sử dụng thông tin công ty này để trả lời câu hỏi." }]
-          },
-          {
-            role: "user",
-            parts: [{ text: lastUserMessage.text }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        }
-      })
-    }
-
     try {
-      const response = await fetch(API_URL, requestOptions);
+      const response = await fetch('http://localhost:3001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: lastUserMessage.text,
+          companyInfo: companyInfo
+        })
+      });
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error?.message || 'Unknown error'}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response from server');
       }
+
       const data = await response.json();
-      console.log("API Response:", data);
       
-      if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-        // Clean up the response text by removing markdown formatting
-        const cleanText = data.candidates[0].content.parts[0].text
-          .replace(/\*\*/g, '') // Remove ** marks
-          .replace(/\*/g, '')   // Remove single * marks
-          .replace(/`/g, '')    // Remove backticks
-          .trim();              // Remove extra whitespace
-        
-        setChatHistory(prev => [...prev, {
-          role: "model",
-          text: cleanText
-        }]);
-      } else {
-        throw new Error("Invalid response format from API");
-      }
+      setChatHistory(prev => [...prev, {
+        role: "model",
+        text: data.text
+      }]);
     } catch(error) {
       console.error("Error generating bot response:", error);
       setChatHistory(prev => [...prev, {
